@@ -1,0 +1,187 @@
+/* File: frontend/src/App.css
+  Description: A professional and "delighted" theme for the typing platform.
+*/
+
+/* --- 1. THEME & FONT DEFINITIONS (CSS Variables) --- */
+/* We define our colors and fonts here as variables. 
+   This is a professional practice that makes it easy to change the 
+   entire look of the site from one place.
+*/
+:root {
+  --font-ui: 'Poppins', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  
+  --color-bg: #1a1b26;      /* A deep, modern charcoal-blue */
+  --color-surface: #24283b; /* The color for our main typing box */
+  --color-text: #c0caf5;    /* A soft, readable light text color */
+  --color-text-dim: #565f89;/* For less important text */
+
+  --color-primary: #7aa2f7; /* A vibrant blue for the cursor and buttons */
+  --color-correct: #9ece6a; /* A pleasant green for correct text */
+  --color-incorrect: #f7768e;/* A clear but not jarring red for errors */
+}
+
+/* File: frontend/src/App.css */
+
+/* --- 3. MAIN LAYOUT --- */
+/* This centers the entire application on the page. */
+
+
+
+/* --- 2. GLOBAL STYLES & RESET --- */
+/* A simple reset to make styling consistent across all browsers. */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+}
+
+
+/* --- 3. MAIN LAYOUT --- */
+/* This centers the entire application on the page. */
+.App {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.App-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem; /* Adds space between the title and the box */
+  width: 100%;
+  max-width: 800px; /* Prevent stretching */
+  margin: 0 auto;    /* Center horizontally */
+}
+
+h1 {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 2rem;
+}
+
+
+/* --- 4. TYPING BOX & COMPONENTS --- */
+.typing-box-container {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--color-surface);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid #3b4261;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* A subtle shadow to lift the box */
+  margin: 0 auto; /* Center horizontally */
+}
+
+.stats-display {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.stat-timer {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  color: var(--color-text);
+  background-color: rgba(0,0,0,0.1); /* Make it subtle */
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+/* File: frontend/src/App.css */
+
+.prompt-display {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  line-height: 2.5rem;
+  text-align: left;
+  white-space: pre-wrap;
+  margin-bottom: 1rem;
+
+  /* Add this line to disable ligatures */
+  font-variant-ligatures: none;
+}
+
+.prompt-display span {
+  position: relative;
+}
+
+.prompt-display span.default { color: var(--color-text-dim); }
+.prompt-display span.correct { color: var(--color-correct); }
+.prompt-display span.incorrect { color: var(--color-incorrect); text-decoration: underline; }
+.prompt-display span.incorrect-space { background-color: var(--color-incorrect); opacity: 0.3; }
+
+/* The cursor is now our primary accent color */
+.prompt-display span.cursor::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background-color: var(--color-primary);
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* The hidden textarea doesn't need styles, but we keep it here */
+.typing-input {
+  opacity: 0;
+  position: absolute;
+  z-index: -1;
+  width: 0; height: 0; resize: none; border: none;
+}
+
+
+/* --- 5. RESULTS SCREEN & BUTTONS --- */
+.results-screen {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.results-screen h2 {
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.results-screen .stat {
+  display: inline-block;
+  background-color: rgba(0,0,0,0.1);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.75rem;
+  margin: 0.5rem;
+  font-family: var(--font-mono);
+}
+
+.reset-button {
+  margin-top: 2rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+  background-color: var(--color-primary);
+  border: none;
+  color: var(--color-bg);
+  border-radius: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease; /* Delightful effect */
+}
+
+/* Add a subtle "lift" effect on hover */
+.reset-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
