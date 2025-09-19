@@ -1,4 +1,5 @@
 // File: frontend/src/TypingBox.jsx
+// Description: Adds an empty onChange handler to the textarea to resolve the React warning.
 
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -25,72 +26,74 @@ function TypingBox({ prompt, onComplete }) {
     return () => clearInterval(interval);
   }, [status, timeLeft]);
 
-  // --- UPDATED KEYDOWN HANDLER with TAB-ONLY AUTO-SKIP ---
   const handleKeyDown = (e) => {
     e.preventDefault();
     const { key } = e;
-    
+
     if (key === 'Backspace') {
       setUserInput(userInput.slice(0, -1));
       return;
     }
-
     if (key === 'Tab') {
       const newText = userInput + "  ";
       setUserInput(newText);
-      updateStats(' '); updateStats(' ');
+      updateStats(' ');
+      updateStats(' ');
       return;
     }
-
     if (key === 'Enter') {
       const newText = userInput + '\n';
       setUserInput(newText);
       updateStats('\n');
       return;
     }
-
     if (key.length === 1) {
       const currentIndex = userInput.length;
       const remainingPrompt = prompt.substring(currentIndex);
-      
-      // --- THIS IS THE CHANGE ---
-      // Instead of looking for any whitespace (\s+),
-      // we now look specifically for one or more tab characters (\t+).
       const tabMatch = remainingPrompt.match(/^\t+/);
-      
       if (tabMatch) {
         const leadingTabs = tabMatch[0];
         const charAfterTabs = prompt[currentIndex + leadingTabs.length];
-
         if (key === charAfterTabs) {
           const textToAdd = leadingTabs + key;
           setUserInput(userInput + textToAdd);
-
-          for (const char of textToAdd) {
-            updateStats(char, true);
-<h3> The Updated `TypingBox.jsx` </h3>
-          }
-          checkCompletion(userInput + textToAdd);
+          textToAdd.split('').forEach(char => updateStats(char));
           return;
         }
       }
-      
       setUserInput(userInput + key);
       updateStats(key);
     }
   };
 
+  const updateStats = (typedChar) => {
+    if (status === 'waiting') {
+      setStatus('inProgress');
+    }
+    if (typedChar !== prompt[totalTyped]) {
+      setTotalErrors((prevErrors) => prevErrors + 1);
+    }
+    setTotalTyped((prevTyped) => prevTyped + 1);
+  };
 
-  const calculateResults = (finalInput = userInput) => {
+  useEffect(() => {
+    if (status === 'inProgress' && userInput.length === prompt.length) {
+      setStatus('finished');
+      calculateResults();
+    }
+  }, [userInput, prompt, status]);
+
+  const calculateResults = () => {
+    const finalUserInput = userInput;
     const newAccuracy = totalTyped > 0 ? ((totalTyped - totalErrors) / totalTyped) * 100 : 100;
     setAccuracy(newAccuracy);
     const timeElapsedInMinutes = (TEST_DURATION - timeLeft) / 60;
     if (timeElapsedInMinutes > 0) {
-      const grossWpm = (finalInput.length / 5) / timeElapsedInMinutes;
+      const grossWpm = (finalUserInput.length / 5) / timeElapsedInMinutes;
       setWpm(Math.round(grossWpm));
     }
   };
-  
+
   const resetTest = () => {
     setStatus('waiting');
     setTimeLeft(TEST_DURATION);
@@ -99,12 +102,16 @@ function TypingBox({ prompt, onComplete }) {
     setAccuracy(0);
     setTotalErrors(0);
     setTotalTyped(0);
-    if (onComplete) onComplete();
+    if (onComplete) {
+      onComplete();
+    }
     textareaRef.current.focus();
   };
 
   useEffect(() => {
-    if (status === 'waiting') textareaRef.current.focus();
+    if (status === 'waiting') {
+      textareaRef.current.focus();
+    }
   }, [status, prompt]);
 
   const renderPrompt = () => {
@@ -113,8 +120,12 @@ function TypingBox({ prompt, onComplete }) {
       if (index < userInput.length) {
         className = char === userInput[index] ? 'correct' : 'incorrect';
       }
-      if (index === userInput.length) className += ' cursor';
-      if (char === ' ' && className.includes('incorrect')) className = 'incorrect-space';
+      if (index === userInput.length) {
+        className += ' cursor';
+      }
+      if (char === ' ' && className.includes('incorrect')) {
+        className = 'incorrect-space';
+      }
       return (
         <span key={index} className={className}>
           {char}
@@ -142,12 +153,13 @@ function TypingBox({ prompt, onComplete }) {
       <div className="prompt-display">
         {renderPrompt()}
       </div>
-      {/* We now ONLY use onKeyDown and remove onChange to prevent conflicts */}
       <textarea
         ref={textareaRef}
         className="typing-input"
         value={userInput}
         onKeyDown={handleKeyDown}
+        // This empty onChange handler fixes the warning.
+        onChange={() => {}} 
         autoFocus
       />
     </div>
