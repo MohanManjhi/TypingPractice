@@ -2,7 +2,7 @@
 // Description: Adds a manual number input for test duration.
 
 import React from 'react';
-import './Settings.css';
+import '../styles/Settings.css';
 
 function Settings({ duration, onDurationChange, category, onCategoryChange }) {
   const durationOptions = [15, 30, 60, 120];
