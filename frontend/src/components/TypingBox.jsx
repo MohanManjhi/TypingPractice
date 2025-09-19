@@ -2,8 +2,9 @@
 // This is the complete and final version with the state update bug fixed.
 
 import React, { useState, useEffect, useRef } from 'react';
+import { supabase } from '../utils/supabaseClient';
 
-function TypingBox({ prompt, duration, onComplete }) {
+function TypingBox({ prompt, duration, onComplete, session, category, onCategoryChange }) {
   // --- STATE MANAGEMENT ---
   const [status, setStatus] = useState('waiting');
   const [timeLeft, setTimeLeft] = useState(duration);
@@ -111,13 +112,39 @@ function TypingBox({ prompt, duration, onComplete }) {
       // Do NOT set status to 'finished' here, let timer control that
     }
   };
-  const calculateResults = () => {
+  const saveProgress = async (wpm, accuracy, totalTyped, totalErrors, duration, session, category) => {
+    if (!session) return; // Only save if user is logged in
+    await supabase.from('sessions').insert([
+      {
+        user_id: session.user.id,
+        wpm,
+        accuracy,
+        total_typed: totalTyped,
+        total_errors: totalErrors,
+        duration_seconds: duration,
+        category,
+        completed_at: new Date().toISOString(),
+      },
+    ]);
+  };
+
+  const calculateResults = async () => {
     const timeElapsedInMinutes = (duration - timeLeft) / 60;
     const newAccuracy = totalTyped > 0 ? ((totalTyped - totalErrors) / totalTyped) * 100 : 100;
     setAccuracy(newAccuracy);
     if (timeElapsedInMinutes > 0) {
       const grossWpm = (totalTyped / 5) / timeElapsedInMinutes;
       setWpm(Math.round(grossWpm));
+      // Save progress to DB with all required fields
+      await saveProgress(
+        Math.round(grossWpm),
+        newAccuracy,
+        totalTyped,
+        totalErrors,
+        duration,
+        session,
+        category
+      );
     }
   };
   
