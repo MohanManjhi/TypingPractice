@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const TEST_DURATION = 60;
 
-function TypingBox({ prompt, onComplete }) {
+function TypingBox({ prompt,duration, onComplete }) {
   const [status, setStatus] = useState('waiting');
   const [timeLeft, setTimeLeft] = useState(TEST_DURATION);
   const [userInput, setUserInput] = useState('');
@@ -14,6 +14,14 @@ function TypingBox({ prompt, onComplete }) {
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
   const textareaRef = useRef(null);
+
+
+   // --- NEW: useEffect to reset test when duration changes ---
+   useEffect(() => {
+    // This will run every time the 'duration' prop from App.jsx changes
+    resetTest(false); // We call reset but don't trigger onComplete
+  }, [duration]);
+
 
   useEffect(() => {
     let interval;
@@ -94,18 +102,20 @@ function TypingBox({ prompt, onComplete }) {
     }
   };
 
-  const resetTest = () => {
+  const resetTest = (shouldCallOnComplete = true) => {
     setStatus('waiting');
-    setTimeLeft(TEST_DURATION);
+    setTimeLeft(duration); // Reset timer to the current duration setting
     setUserInput('');
     setWpm(0);
     setAccuracy(0);
     setTotalErrors(0);
     setTotalTyped(0);
-    if (onComplete) {
+    if (shouldCallOnComplete && onComplete) {
       onComplete();
     }
-    textareaRef.current.focus();
+    if (textareaRef.current) {
+        textareaRef.current.focus();
+    }
   };
 
   useEffect(() => {
