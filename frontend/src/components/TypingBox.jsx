@@ -1,13 +1,12 @@
 // File: frontend/src/TypingBox.jsx
-// Description: Adds an empty onChange handler to the textarea to resolve the React warning.
+// This is the complete and final version with the state update bug fixed.
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const TEST_DURATION = 60;
-
-function TypingBox({ prompt,duration, onComplete }) {
+function TypingBox({ prompt, duration, onComplete }) {
+  // --- STATE MANAGEMENT ---
   const [status, setStatus] = useState('waiting');
-  const [timeLeft, setTimeLeft] = useState(TEST_DURATION);
+  const [timeLeft, setTimeLeft] = useState(duration);
   const [userInput, setUserInput] = useState('');
   const [totalErrors, setTotalErrors] = useState(0);
   const [totalTyped, setTotalTyped] = useState(0);
@@ -15,47 +14,65 @@ function TypingBox({ prompt,duration, onComplete }) {
   const [accuracy, setAccuracy] = useState(0);
   const textareaRef = useRef(null);
 
+  // --- SIDE EFFECTS (useEffect Hooks) ---
 
-   // --- NEW: useEffect to reset test when duration changes ---
-   useEffect(() => {
-    // This will run every time the 'duration' prop from App.jsx changes
-    resetTest(false); // We call reset but don't trigger onComplete
+  // Resets the test completely when the duration is changed from settings
+  useEffect(() => {
+    resetTest(false);
   }, [duration]);
 
+  // Handles receiving a new prompt for continuous typing
+  useEffect(() => {
+    if (status === 'inProgress') {
+      setUserInput('');
+    }
+  }, [prompt]);
 
+  // Manages the countdown timer
   useEffect(() => {
     let interval;
     if (status === 'inProgress' && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+      interval = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
     } else if (timeLeft === 0 && status === 'inProgress') {
       setStatus('finished');
       calculateResults();
     }
     return () => clearInterval(interval);
   }, [status, timeLeft]);
+  
+  // Focuses the textarea when the test is ready
+  useEffect(() => {
+    if (status === 'waiting') {
+      textareaRef.current.focus();
+    }
+  }, [status, prompt]);
 
+  // --- INPUT HANDLING ---
+
+  // A single, unified function to handle all keyboard input
   const handleKeyDown = (e) => {
     e.preventDefault();
     const { key } = e;
-
+    
     if (key === 'Backspace') {
       setUserInput(userInput.slice(0, -1));
       return;
     }
     if (key === 'Tab') {
-      const newText = userInput + "  ";
-      setUserInput(newText);
+      setUserInput(userInput + "  ");
       updateStats(' ');
       updateStats(' ');
       return;
     }
     if (key === 'Enter') {
-      const newText = userInput + '\n';
-      setUserInput(newText);
+      setUserInput(userInput + '\n');
       updateStats('\n');
       return;
     }
     if (key.length === 1) {
+      // Auto-skip logic for tab characters
       const currentIndex = userInput.length;
       const remainingPrompt = prompt.substring(currentIndex);
       const tabMatch = remainingPrompt.match(/^\t+/);
@@ -69,42 +86,45 @@ function TypingBox({ prompt,duration, onComplete }) {
           return;
         }
       }
+      // Normal typing
       setUserInput(userInput + key);
       updateStats(key);
     }
   };
 
+  // --- CORRECTED HELPER FUNCTIONS ---
   const updateStats = (typedChar) => {
     if (status === 'waiting') {
       setStatus('inProgress');
     }
-    if (typedChar !== prompt[totalTyped]) {
-      setTotalErrors((prevErrors) => prevErrors + 1);
+    if (typedChar !== prompt[userInput.length]) {
+      setTotalErrors((prev) => prev + 1);
     }
-    setTotalTyped((prevTyped) => prevTyped + 1);
+    setTotalTyped((prev) => prev + 1);
+
+    // --- THIS IS THE OTHER KEY FIX ---
+    // Check if the user has finished the CURRENT prompt.
+    if (userInput.length + 1 === prompt.length) {
+      // Instantly call onComplete to get a new prompt from the parent.
+      setUserInput(''); // Reset input for next prompt
+      if (onComplete) onComplete();
+      // Do NOT set status to 'finished' here, let timer control that
+    }
   };
-
-  useEffect(() => {
-    if (status === 'inProgress' && userInput.length === prompt.length) {
-      setStatus('finished');
-      calculateResults();
-    }
-  }, [userInput, prompt, status]);
-
   const calculateResults = () => {
-    const finalUserInput = userInput;
+    const timeElapsedInMinutes = (duration - timeLeft) / 60;
     const newAccuracy = totalTyped > 0 ? ((totalTyped - totalErrors) / totalTyped) * 100 : 100;
     setAccuracy(newAccuracy);
-    const timeElapsedInMinutes = (TEST_DURATION - timeLeft) / 60;
     if (timeElapsedInMinutes > 0) {
-      const grossWpm = (finalUserInput.length / 5) / timeElapsedInMinutes;
+      const grossWpm = (totalTyped / 5) / timeElapsedInMinutes;
       setWpm(Math.round(grossWpm));
     }
   };
-
+  
+  // This is for a full reset (e.g., from results screen or duration change)
   const resetTest = (shouldCallOnComplete = true) => {
     setStatus('waiting');
-    setTimeLeft(duration); // Reset timer to the current duration setting
+    setTimeLeft(duration);
     setUserInput('');
     setWpm(0);
     setAccuracy(0);
@@ -113,16 +133,11 @@ function TypingBox({ prompt,duration, onComplete }) {
     if (shouldCallOnComplete && onComplete) {
       onComplete();
     }
-    if (textareaRef.current) {
-        textareaRef.current.focus();
-    }
+    if (textareaRef.current) textareaRef.current.focus();
   };
 
-  useEffect(() => {
-    if (status === 'waiting') {
-      textareaRef.current.focus();
-    }
-  }, [status, prompt]);
+
+  // --- RENDER LOGIC ---
 
   const renderPrompt = () => {
     return prompt.split('').map((char, index) => {
@@ -130,12 +145,8 @@ function TypingBox({ prompt,duration, onComplete }) {
       if (index < userInput.length) {
         className = char === userInput[index] ? 'correct' : 'incorrect';
       }
-      if (index === userInput.length) {
-        className += ' cursor';
-      }
-      if (char === ' ' && className.includes('incorrect')) {
-        className = 'incorrect-space';
-      }
+      if (index === userInput.length) className += ' cursor';
+      if (char === ' ' && className.includes('incorrect')) className = 'incorrect-space';
       return (
         <span key={index} className={className}>
           {char}
@@ -150,10 +161,14 @@ function TypingBox({ prompt,duration, onComplete }) {
         <h2>Test Completed!</h2>
         <div className="stat">WPM: {wpm}</div>
         <div className="stat">Accuracy: {accuracy.toFixed(1)}%</div>
-        <button onClick={resetTest} className="reset-button">Try Again & Next Prompt</button>
+        <button onClick={resetTest} className="reset-button">Try Again</button>
       </div>
     );
   }
+
+
+
+
 
   return (
     <div className="typing-box-container" onClick={() => textareaRef.current.focus()}>
@@ -168,8 +183,7 @@ function TypingBox({ prompt,duration, onComplete }) {
         className="typing-input"
         value={userInput}
         onKeyDown={handleKeyDown}
-        // This empty onChange handler fixes the warning.
-        onChange={() => {}} 
+        onChange={() => {}} // Empty handler to prevent React read-only warning
         autoFocus
       />
     </div>
